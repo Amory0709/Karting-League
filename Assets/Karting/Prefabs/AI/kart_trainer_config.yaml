@@ -6,7 +6,7 @@ default_settings:
   time_horizon: 64 # [Common] default = 64 | # of exp steps per agent before add exp to buffer | Typical range: 32 ~ 2048
   max_steps: 5.0e10 # [Common] default = 500000 | Total number of steps before training end | Typical range: 5e5 ~ 1e7
   keep_checkpoints: 8 # [Common] default = 5 | max checkpoints to save. pass a checkpoint_interval -> save a checkpoint, more than this number, drop the oldest one | Typical range: none
-  even_checkpoints: false # [Common] default = false | true -> ignore `checkpoint_interval` and evenly distributes checkpoints (Useful for cataloging agent behavior throughout training) |  Typical range: none
+  # even_checkpoints: false # [Common] default = false | true -> ignore `checkpoint_interval` and evenly distributes checkpoints (Useful for cataloging agent behavior throughout training) |  Typical range: none
   checkpoint_interval: 10000 # [Common] default = 500000 | The number of experiences collected between each checkpoint by the trainer (Each checkpoint saves the .onnx files in results/ folder)| Typical range: none
   init_path: None # [Common] default = None | Initialize trainer from a previously saved model. | file name {checkpoint_name.pt} or the full path to the checkpoint ./models/{run-id}/{behavior_name}/{checkpoint_name.pt}.
   threaded: false # [Common] default = false | Allow environments to step while updating the model, might result in a training speedup |  Types: false, true
@@ -21,7 +21,7 @@ default_settings:
     epsilon_schedule: linear # [PPO] default=learning_rate_schedule |  + -> decay `epsilon` linearly, reaching 0 at max_steps |  Typical range: linear, constant
     lambd: 0.95 # [PPO] default=0.95 |  + -> relying more on actual rewards |  Typical range: 0.9 ~ 0.95
     num_epoch: 3 # [PPO] default=3 |  + -> quick learning and unstable update (epoch means number of passes to make through the experience buffer when do gradient descent optimization) |  Typical range: 3 ~ 10
-    shared_critic: False # [PPO] default=False | Whether or not the policy and value function networks share a backbone. | Types: False, True ??
+    # shared_critic: false # [PPO] default=False | Whether or not the policy and value function networks share a backbone. | Types: False, True ??
   network_settings:
     hidden_units: 128 # [Common] default = 128 | Number of units in the hidden layers of the neural network. | Typical range: 32 ~ 512
     num_layers: 2  # [Common] default = 2 | Nnumber of hidden layers in the neural network. simpler problem -> less | Typical range: 1 ~ 3
