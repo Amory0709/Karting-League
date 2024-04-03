@@ -8,7 +8,7 @@ default_settings:
   keep_checkpoints: 8 # [Common] default = 5 | max checkpoints to save. pass a checkpoint_interval -> save a checkpoint, more than this number, drop the oldest one | Typical range: none
   # even_checkpoints: false # [Common] default = false | true -> ignore `checkpoint_interval` and evenly distributes checkpoints (Useful for cataloging agent behavior throughout training) |  Typical range: none
   checkpoint_interval: 10000 # [Common] default = 500000 | The number of experiences collected between each checkpoint by the trainer (Each checkpoint saves the .onnx files in results/ folder)| Typical range: none
-  init_path: None # [Common] default = None | Initialize trainer from a previously saved model. | file name {checkpoint_name.pt} or the full path to the checkpoint ./models/{run-id}/{behavior_name}/{checkpoint_name.pt}.
+  # init_path: None # [Common] default = None | Initialize trainer from a previously saved model. | file name {checkpoint_name.pt} or the full path to the checkpoint ./models/{run-id}/{behavior_name}/{checkpoint_name.pt}.
   threaded: false # [Common] default = false | Allow environments to step while updating the model, might result in a training speedup |  Types: false, true
   hyperparameters:
     learning_rate: 3.0e-4  # [Common] default = 3e-4 | Initial learning rate for gradient descent. | Typical range: 1e-5 ~ 1e-3
