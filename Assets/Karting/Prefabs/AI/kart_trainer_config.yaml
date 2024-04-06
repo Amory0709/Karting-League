@@ -1,26 +1,42 @@
+
+# https://unity-technologies.github.io/ml-agents/Training-Configuration-File
 default_settings:
-  trainer_type: ppo
+  trainer_type: ppo # [Common] default = ppo | type of trainer | Types: ppo, sac, poca
+  summary_freq: 100 # [Common] default = 50000 | # of exp before get statistics | Typical range: none
+  time_horizon: 64 # [Common] default = 64 | # of exp steps per agent before add exp to buffer | Typical range: 32 ~ 2048
+  max_steps: 5.0e10 # [Common] default = 500000 | Total number of steps before training end | Typical range: 5e5 ~ 1e7
+  keep_checkpoints: 8 # [Common] default = 5 | max checkpoints to save. pass a checkpoint_interval -> save a checkpoint, more than this number, drop the oldest one | Typical range: none
+  # even_checkpoints: false # [Common] default = false | true -> ignore `checkpoint_interval` and evenly distributes checkpoints (Useful for cataloging agent behavior throughout training) |  Typical range: none
+  checkpoint_interval: 10000 # [Common] default = 500000 | The number of experiences collected between each checkpoint by the trainer (Each checkpoint saves the .onnx files in results/ folder)| Typical range: none
+  # init_path: None # [Common] default = None | Initialize trainer from a previously saved model. | file name {checkpoint_name.pt} or the full path to the checkpoint ./models/{run-id}/{behavior_name}/{checkpoint_name.pt}.
+  threaded: false # [Common] default = false | Allow environments to step while updating the model, might result in a training speedup |  Types: false, true
   hyperparameters:
-    batch_size: 1024
-    buffer_size: 10240
-    learning_rate: 3.0e-4
-    learning_rate_schedule: linear
-    beta: 5.0e-3
-    epsilon: 0.2
-    lambd: 0.95
-    num_epoch: 3
+    learning_rate: 3.0e-4  # [Common] default = 3e-4 | Initial learning rate for gradient descent. | Typical range: 1e-5 ~ 1e-3
+    batch_size: 512  # [Common] default = none | Number of experiences in each iteration of gradient descent. This should always be multiple times smaller than buffer_size.  Continuous *1000, Discrete*10 | Typical range: (Continuous - PPO): 512 - 5120; (Continuous - SAC): 128 - 1024; (Discrete, PPO & SAC): 32 - 512.
+    buffer_size: 5120  # [Common] default = 10240 for PPO and 50000 for SAC | Number of experiences to collect before updating the policy model for PPO / exp buffer for SAC | Typical range: PPO: 2048 - 409600; SAC: 50000 - 1000000
+    learning_rate_schedule: linear  # [Common] (default = linear for PPO and constant for SAC) | how learning rate changes over time | Types: linear, constant
+    beta: 1.0e-4  # [PPO] default=5.0e-3 |  + -> more random action |  Typical range: 1e-4 ~ 1e-2
+    epsilon: 0.2   # [PPO] default=0.2 |  + -> rappid policy evolve |  Typical range: 0.1 ~ 0.3
+    beta_schedule: linear # [PPO] default=learning_rate_schedule |  + -> decay `beta` linearly, reaching 0 at max_steps |  Typical range: linear, constant
+    epsilon_schedule: linear # [PPO] default=learning_rate_schedule |  + -> decay `epsilon` linearly, reaching 0 at max_steps |  Typical range: linear, constant
+    lambd: 0.95 # [PPO] default=0.95 |  + -> relying more on actual rewards |  Typical range: 0.9 ~ 0.95
+    num_epoch: 3 # [PPO] default=3 |  + -> quick learning and unstable update (epoch means number of passes to make through the experience buffer when do gradient descent optimization) |  Typical range: 3 ~ 10
+    # shared_critic: false # [PPO] default=False | Whether or not the policy and value function networks share a backbone. | Types: False, True ??
   network_settings:
-    vis_encode_type: simple
-    normalize: false
-    hidden_units: 128
-    num_layers: 2
+    hidden_units: 128 # [Common] default = 128 | Number of units in the hidden layers of the neural network. | Typical range: 32 ~ 512
+    num_layers: 2  # [Common] default = 2 | Nnumber of hidden layers in the neural network. simpler problem -> less | Typical range: 1 ~ 3
+    normalize: false  # [Common] default = false | normalized vector observation | Types: false, true
+    vis_encode_type: match3  # [Common] default = simple | Encoder type for encoding visual observations. | Types: simple, nature_cnn, resnet, match3, fully_connected
+    conditioning_type: hyper # [Common] default = hyper | `hyper` generates weights for policy (it is recommended to reduce the number of hidden_units) | Types: none, hyper
     memory:
-      sequence_length: 64
-      memory_size: 256
+      memory_size: 512  # [Memory] default = 128 | Size of the memory an agent must keep. This value must be a multiple of 2. Enough for Task. | Typical range: 32 ~ 256 
+      sequence_length: 64  # [Memory] default = 64 |  how long the sequences of experiences must be while training | Typical range: 4 ~ 128 
   reward_signals:
     extrinsic:
-      strength: 1.0
-      gamma: 0.99
-  max_steps: 5.0e10
-  time_horizon: 64
-  summary_freq: 1000
+      strength: 1.0  # [Rewards] default = 1.0 | factor to multiply the reward, ranges will vary depending on the reward signal. | Typical range: 1.00
+      gamma: 0.99  # [Rewards] default = 0.99 | Discount factor for future rewards coming from the environment. MUST strictly < 1.| Typical range: 0.8 ~ 0.995
+    # curiosity:
+    #   strength: 1.0  # [Rewards] default = 1.0 | Magnitude of the curiosity reward generated by the intrinsic curiosity module. |  Typical range: 0.001 ~ 0.1
+    #   gamma: 0.99  # [Rewards] default = 0.99 | Discount factor for future rewards.|  Typical range: 0.8 ~ 0.995
+    #   network_settings: 64   # [Rewards] default = 0.99 | read `network_settings` |  Typical range: 64 ~ 256
+    #   learning_rate: 3.0e-4  # [Rewards] default = 3e-4 | Learning rate used to update the intrinsic curiosity module. | Typical range: 1e-5 ~ 1e-3
