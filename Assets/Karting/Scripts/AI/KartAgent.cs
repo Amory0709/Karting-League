@@ -102,7 +102,6 @@ namespace KartGame.AI
             SetBehaviorParameters();
             SetDecisionRequester();
         }
-        
 
         private void Start()
         {
@@ -120,6 +119,7 @@ namespace KartGame.AI
                 m_EndEpisode = false;
                 AddReward(m_LastAccumulatedReward);
                 EndEpisode();
+                Debug.Log(" -----------CURRENT SCORE: " + m_Acceleration + "---------------------");
                 OnEpisodeBegin();
             }
         }
@@ -279,7 +279,113 @@ namespace KartGame.AI
                 Brake = m_Brake,
                 TurnInput = m_Steering
             };
-        }        
+        }
+
+
+        private void SetBehaviorParameters(){
+            var behaviorParameters = GetComponent<BehaviorParameters>();
+            behaviorParameters.UseChildSensors = true;
+            behaviorParameters.ObservableAttributeHandling = ObservableAttributeOptions.Ignore;
+            // TODO set other behavior parameters according to your own agent implementation, especially following ones:
+            behaviorParameters.BehaviorType = BehaviorType.Default;
+            behaviorParameters.BehaviorName = "First-SG-Driver";
+            behaviorParameters.BrainParameters.VectorObservationSize = 12; // size of the ML input data, should be the same as the `AddObservation` number
+            behaviorParameters.BrainParameters.NumStackedVectorObservations = 4;
+            behaviorParameters.BrainParameters.ActionSpec = ActionSpec.MakeDiscrete(3, 3); // format of the ML model output data [0, 1, 2] [0, 1, 2]
+            // continuous are floats [-1, 1]
+        }
+
+        private void SetDecisionRequester()
+        {
+            var decisionRequester = GetComponent<DecisionRequester>();
+            //TODO set your decision requester
+            decisionRequester.DecisionPeriod = 1;
+            decisionRequester.TakeActionsBetweenDecisions = true;
+        }
+
+        private void InitialiseResetParameters()
+        {
+            OutOfBoundsMask = LayerMask.GetMask("Ground");
+            TrackMask = LayerMask.GetMask("Track");
+            GroundCastDistance = 1f;
+        }
+
+        private void InitializeSenses()
+        {
+            // TODO Define your own sensors
+            // make sure you are choosing from our predefined sensors, otherwise it won't work in competition
+            // predefined:
+            // "MLAgent_Sensors/0" "MLAgent_Sensors/15" "MLAgent_Sensors/30" "MLAgent_Sensors/45" "MLAgent_Sensors/60" "MLAgent_Sensors/75" "MLAgent_Sensors/90"
+            // "MLAgent_Sensors/-15" "MLAgent_Sensors/-30" "MLAgent_Sensors/-45" "MLAgent_Sensors/-60" "MLAgent_Sensors/-75" "MLAgent_Sensors/-90"
+            Sensors = new Sensor[9];
+            Sensors[0] = new Sensor
+            {
+                Transform = transform.Find("MLAgent_Sensors/-90"),
+                HitValidationDistance = 4f,
+                RayDistance = 5
+            };
+            Debug.Log(Sensors[0]);
+            Sensors[1] = new Sensor
+            {
+                Transform = transform.Find("MLAgent_Sensors/-60"),
+                HitValidationDistance = 5f,
+                RayDistance = 10
+            };
+            Sensors[2] = new Sensor
+            {
+                Transform = transform.Find("MLAgent_Sensors/-30"),
+                HitValidationDistance = 10f,
+                RayDistance = 15
+            };
+            Sensors[3] = new Sensor
+            {
+                Transform = transform.Find("MLAgent_Sensors/0"),
+                HitValidationDistance = 15f,
+                RayDistance = 30
+            };
+            Sensors[4] = new Sensor
+            {
+                Transform = transform.Find("MLAgent_Sensors/30"),
+                HitValidationDistance = 10f,
+                RayDistance = 15
+            };
+            Sensors[5] = new Sensor
+            {
+                Transform = transform.Find("MLAgent_Sensors/60"),
+                HitValidationDistance = 5f,
+                RayDistance = 10,
+
+            };
+            Sensors[6] = new Sensor
+            {
+                Transform = transform.Find("MLAgent_Sensors/90"),
+                HitValidationDistance = 4f,
+                RayDistance = 5
+            };
+            Sensors[7] = new Sensor
+            {
+                Transform = transform.Find("MLAgent_Sensors/45"),
+                HitValidationDistance = 7f,
+                RayDistance = 12.5f
+            };
+            Sensors[8] = new Sensor
+            {
+                Transform = transform.Find("MLAgent_Sensors/-45"),
+                HitValidationDistance = 7f,
+                RayDistance = 12.5f
+            };
+
+            // set Mask
+            Mask = LayerMask.GetMask("Default", "Ground", "Environment", "Track");
+
+            // set Checkpoints
+            Checkpoints = GameObject.Find("Checkpoints").transform.GetComponentsInChildren<Collider>();
+
+            // set CheckpointMask
+            CheckpointMask = LayerMask.GetMask("CompetitionCheckpoints", "TrainingCheckpoints");
+        }
+        
+
 
         // 1. Called at the beginning of an Agent's episode, including at the beginning of the simulation.
         public override void OnEpisodeBegin()
