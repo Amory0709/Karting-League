@@ -22,7 +22,7 @@ namespace KartGame.AI
         [Tooltip("Are we training the agent or is the agent production ready?")]
         // use Training mode when you train model, use inferencing mode for competition
         // TODO should be set to Inferencing when you submit this script
-        public AgentMode Mode = AgentMode.Training;
+        public AgentMode Mode = AgentMode.Inferencing;
 
         [Tooltip("What is the initial checkpoint the agent will go to? This value is only for inferencing. It is set to a random number in training mode")]
         public ushort InitCheckpointIndex = 0;
@@ -190,14 +190,18 @@ namespace KartGame.AI
         {
             // TODO Add your observations
             sensor.AddObservation(m_Kart.LocalSpeed());
+            Debug.Log("Add observation speed: "+ m_Kart.LocalSpeed());
+
             var next = (m_CheckpointIndex + 1) % Checkpoints.Length;
             var nextCheckpoint = Checkpoints[next];
-            if(nextCheckpoint != null) { return; }
+            Debug.Log("Checkpoints detected: " + next + nextCheckpoint);
+            if(nextCheckpoint == null) { return; }
 
             var direction = (nextCheckpoint.transform.position - m_Kart.transform.position).normalized;
             sensor.AddObservation(Vector3.Dot(m_Kart.Rigidbody.velocity.normalized, direction));
+            Debug.Log("Add observation direction: " + direction);
 
-            if(ShowRayCast)
+            if (ShowRayCast)
             {
                 Debug.DrawLine(AgentSensorTransform.position, nextCheckpoint.transform.position, Color.magenta);
             }
@@ -231,6 +235,8 @@ namespace KartGame.AI
                 }
 
                 sensor.AddObservation(hit ? hitInfo.distance : current.RayDistance);
+                Debug.Log("Add observation hit: " + hit + hitInfo.distance + current.RayDistance);
+
             }
             sensor.AddObservation(m_Acceleration);
         }
@@ -292,6 +298,7 @@ namespace KartGame.AI
             behaviorParameters.BrainParameters.VectorObservationSize = 12; // size of the ML input data, should be the same as the `AddObservation` number
             behaviorParameters.BrainParameters.NumStackedVectorObservations = 4;
             behaviorParameters.BrainParameters.ActionSpec = ActionSpec.MakeDiscrete(3, 3); // format of the ML model output data [0, 1, 2] [0, 1, 2]
+           
             // continuous are floats [-1, 1]
         }
 
@@ -321,57 +328,57 @@ namespace KartGame.AI
             Sensors[0] = new Sensor
             {
                 Transform = transform.Find("MLAgent_Sensors/-90"),
-                HitValidationDistance = 4f,
+                HitValidationDistance = 1f,
                 RayDistance = 5
             };
             Debug.Log(Sensors[0]);
             Sensors[1] = new Sensor
             {
                 Transform = transform.Find("MLAgent_Sensors/-60"),
-                HitValidationDistance = 5f,
+                HitValidationDistance = 1.5f,
                 RayDistance = 10
             };
             Sensors[2] = new Sensor
             {
                 Transform = transform.Find("MLAgent_Sensors/-30"),
-                HitValidationDistance = 10f,
+                HitValidationDistance = 1.8f,
                 RayDistance = 15
             };
             Sensors[3] = new Sensor
             {
                 Transform = transform.Find("MLAgent_Sensors/0"),
-                HitValidationDistance = 15f,
+                HitValidationDistance = 3f,
                 RayDistance = 30
             };
             Sensors[4] = new Sensor
             {
                 Transform = transform.Find("MLAgent_Sensors/30"),
-                HitValidationDistance = 10f,
+                HitValidationDistance = 1.8f,
                 RayDistance = 15
             };
             Sensors[5] = new Sensor
             {
                 Transform = transform.Find("MLAgent_Sensors/60"),
-                HitValidationDistance = 5f,
-                RayDistance = 10,
+                HitValidationDistance = 1.5f,
+                RayDistance = 15,
 
             };
             Sensors[6] = new Sensor
             {
                 Transform = transform.Find("MLAgent_Sensors/90"),
-                HitValidationDistance = 4f,
-                RayDistance = 5
+                HitValidationDistance = 1f,
+                RayDistance = 10
             };
             Sensors[7] = new Sensor
             {
                 Transform = transform.Find("MLAgent_Sensors/45"),
-                HitValidationDistance = 7f,
+                HitValidationDistance = 1.7f,
                 RayDistance = 12.5f
             };
             Sensors[8] = new Sensor
             {
                 Transform = transform.Find("MLAgent_Sensors/-45"),
-                HitValidationDistance = 7f,
+                HitValidationDistance = 1.7f,
                 RayDistance = 12.5f
             };
 
@@ -400,8 +407,7 @@ namespace KartGame.AI
                     transform.localRotation = collider.transform.rotation;
                     transform.position = collider.transform.position;
                     m_Kart.Rigidbody.velocity = default;
-                    m_Acceleration = false;
-                    m_Brake = false;
+                    m_Acceleration = m_Brake = false;
                     m_Steering = 0f;
                     break;
 
