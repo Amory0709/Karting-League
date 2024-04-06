@@ -102,109 +102,7 @@ namespace KartGame.AI
             SetBehaviorParameters();
             SetDecisionRequester();
         }
-
-        private void SetBehaviorParameters(){
-            var behaviorParameters = GetComponent<BehaviorParameters>();
-            behaviorParameters.UseChildSensors = true;
-            behaviorParameters.ObservableAttributeHandling = ObservableAttributeOptions.Ignore;
-            // TODO set other behavior parameters according to your own agent implementation, especially following ones:
-            behaviorParameters.BehaviorType = BehaviorType.Default;
-            behaviorParameters.BehaviorName = "First-SG-Driver";
-            behaviorParameters.BrainParameters.VectorObservationSize = 12; // size of the ML input data, should be the same as the `AddObservation` number
-            behaviorParameters.BrainParameters.NumStackedVectorObservations = 4;
-            behaviorParameters.BrainParameters.ActionSpec = ActionSpec.MakeDiscrete(3, 3); // format of the ML model output data [0, 1, 2] [0, 1, 2]
-            // continuous are floats [-1, 1]
-        }
-
-        private void SetDecisionRequester()
-        {
-            var decisionRequester = GetComponent<DecisionRequester>();
-            //TODO set your decision requester
-            decisionRequester.DecisionPeriod = 1;
-            decisionRequester.TakeActionsBetweenDecisions = true;
-        }
-
-        private void InitialiseResetParameters()
-        {
-            OutOfBoundsMask = LayerMask.GetMask("Ground");
-            TrackMask = LayerMask.GetMask("Track");
-            GroundCastDistance = 1f;
-        }
-
-        private void InitializeSenses()
-        {
-            // TODO Define your own sensors
-            // make sure you are choosing from our predefined sensors, otherwise it won't work in competition
-            // predefined:
-            // "MLAgent_Sensors/0" "MLAgent_Sensors/15" "MLAgent_Sensors/30" "MLAgent_Sensors/45" "MLAgent_Sensors/60" "MLAgent_Sensors/75" "MLAgent_Sensors/90"
-            // "MLAgent_Sensors/-15" "MLAgent_Sensors/-30" "MLAgent_Sensors/-45" "MLAgent_Sensors/-60" "MLAgent_Sensors/-75" "MLAgent_Sensors/-90"
-            Sensors = new Sensor[9];
-            Sensors[0] = new Sensor
-            {
-                Transform = transform.Find("MLAgent_Sensors/-90"),
-                HitValidationDistance = 4f,
-                RayDistance = 5
-            };
-            Debug.Log(Sensors[0]);
-            Sensors[1] = new Sensor
-            {
-                Transform = transform.Find("MLAgent_Sensors/-60"),
-                HitValidationDistance = 5f,
-                RayDistance = 10
-            };
-            Sensors[2] = new Sensor
-            {
-                Transform = transform.Find("MLAgent_Sensors/-30"),
-                HitValidationDistance = 10f,
-                RayDistance = 15
-            };
-            Sensors[3] = new Sensor
-            {
-                Transform = transform.Find("MLAgent_Sensors/0"),
-                HitValidationDistance = 15f,
-                RayDistance = 30
-            };
-            Sensors[4] = new Sensor
-            {
-                Transform = transform.Find("MLAgent_Sensors/30"),
-                HitValidationDistance = 10f,
-                RayDistance = 15
-            };
-            Sensors[5] = new Sensor
-            {
-                Transform = transform.Find("MLAgent_Sensors/60"),
-                HitValidationDistance = 5f,
-                RayDistance = 10,
-
-            };
-            Sensors[6] = new Sensor
-            {
-                Transform = transform.Find("MLAgent_Sensors/90"),
-                HitValidationDistance = 4f,
-                RayDistance = 5
-            };
-            Sensors[7] = new Sensor
-            {
-                Transform = transform.Find("MLAgent_Sensors/45"),
-                HitValidationDistance = 7f,
-                RayDistance = 12.5f
-            };
-            Sensors[8] = new Sensor
-            {
-                Transform = transform.Find("MLAgent_Sensors/-45"),
-                HitValidationDistance = 7f,
-                RayDistance = 12.5f
-            };
-
-            // set Mask
-            Mask = LayerMask.GetMask("Default", "Ground", "Environment", "Track");
-
-            // set Checkpoints
-            Checkpoints = GameObject.Find("Checkpoints").transform.GetComponentsInChildren<Collider>();
-
-            // set CheckpointMask
-            CheckpointMask = LayerMask.GetMask("CompetitionCheckpoints", "TrainingCheckpoints");
-        }
+        
 
         private void Start()
         {
@@ -253,20 +151,8 @@ namespace KartGame.AI
         }
 
 
-        
-
-        private void FindCheckPointIndex(Collider checkPoint, out int index)
+        void OnTriggerEnter(Collider other)
         {
-            for (int i = 0; i < Checkpoints.Length; i++)
-            {
-                if (Checkpoints[i].GetInstanceID() == checkPoint.GetInstanceID())
-                {
-                    index = i;
-                    return;
-                }
-            }
-            index = -1;
-        }   {
             // TODO implement what should the agent do when it touched a checkpoint
             Debug.Log("!!!!!!!!!!!!!!!CONGRATULATION");
             Debug.Log("PASS ONE CHECKPOINT!!!");
@@ -283,6 +169,19 @@ namespace KartGame.AI
                 AddReward(PassCheckpointReward);
                 m_CheckpointIndex = index;
             }
+        }
+
+        private void FindCheckPointIndex(Collider checkPoint, out int index)
+        {
+            for (int i = 0; i < Checkpoints.Length; i++)
+            {
+                if (Checkpoints[i].GetInstanceID() == checkPoint.GetInstanceID())
+                {
+                    index = i;
+                    return;
+                }
+            }
+            index = -1;
         }
 
         // input of the ML model
@@ -336,6 +235,41 @@ namespace KartGame.AI
             sensor.AddObservation(m_Acceleration);
         }
 
+
+
+        // the output of the AI model, the vector(??) of next movement
+        // Called every time the Agent receives an action to take. Receives the action chosen by the Agent. It is also common to assign a reward in this method.
+        public override void OnActionReceived(ActionBuffers actions)
+        {
+            base.OnActionReceived(actions);
+            InterpretDiscreteActions(actions);
+            // TODO Add your rewards/penalties
+
+            var next = (m_CheckpointIndex + 1) % Checkpoints.Length;
+            var nextCheckPoint = Checkpoints[next];
+            var direction = (nextCheckPoint.transform.position - m_Kart.transform.position).normalized;
+            var reward = Vector3.Dot(m_Kart.Rigidbody.velocity.normalized, direction);
+
+            if (ShowRayCast)
+            {
+                Debug.DrawRay(AgentSensorTransform.position, m_Kart.Rigidbody.velocity, Color.blue);
+            }
+
+            AddReward(reward * TowardsCheckpointRewards);
+            AddReward((m_Acceleration && !m_Brake ? 1.0f : 0.0f) * AccelerationReward);
+            AddReward(m_Kart.LocalSpeed() * SpeedReward);
+        }
+
+        private void InterpretDiscreteActions(ActionBuffers actions)
+        {
+            Debug.Log("Action 0: " + actions.DiscreteActions[0]); // action 1 means turn or not
+            Debug.Log("Action 1: " + actions.DiscreteActions[1]); // action 2 means acceleration or not
+
+            m_Steering = actions.DiscreteActions[0] - 1f;
+            m_Acceleration = actions.DiscreteActions[1] >= 1.0f;
+            m_Brake = actions.DiscreteActions[1] < 1.0f;
+        }
+
         // to control the movement of arcade kart
         public InputData GenerateInput()
         {
@@ -370,122 +304,7 @@ namespace KartGame.AI
             }
         }
 
-        void OnTriggerEnter(Collider other)
-        {
-            // TODO implement what should the agent do when it touched a checkpoint
-            Debug.Log("!!!!!!!!!!!!!!!CONGRATULATION");
-            Debug.Log("PASS ONE CHECKPOINT!!!");
-
-            // ????
-            var maskedValue = 1 << other.gameObject.layer;
-            var triggered = maskedValue & CheckpointMask;
-
-            FindCheckPointIndex(other, out var index);
-
-
-            if (triggered > 0 && index > m_CheckpointIndex || index == 0 && m_CheckpointIndex == Checkpoints.Length)
-            {
-                AddReward(PassCheckpointReward);
-                m_CheckpointIndex = index;
-            }
-        }
         
-        private void FindCheckPointIndex(Collider checkPoint, out int index)
-        {
-            for (int i = 0; i < Checkpoints.Length; i++)
-            {
-                if (Checkpoints[i].GetInstanceID() == checkPoint.GetInstanceID())
-                {
-                    index = i;
-                    return;
-                }
-            }
-            index = -1;
-        }
-
-        // input of the ML model
-        // Called every step that the Agent requests a decision. This is one possible way for collecting the Agent's observations of the environment
-        public override void CollectObservations(VectorSensor sensor)
-        {
-            // TODO Add your observations
-            sensor.AddObservation(m_Kart.LocalSpeed());
-            var next = (m_CheckpointIndex + 1) % Checkpoints.Length;
-            var nextCheckpoint = Checkpoints[next];
-            if(nextCheckpoint != null) { return; }
-
-            var direction = (nextCheckpoint.transform.position - m_Kart.transform.position).normalized;
-            sensor.AddObservation(Vector3.Dot(m_Kart.Rigidbody.velocity.normalized, direction));
-
-            if(ShowRayCast)
-            {
-                Debug.DrawLine(AgentSensorTransform.position, nextCheckpoint.transform.position, Color.magenta);
-            }
-
-            m_LastAccumulatedReward = 0.0f;
-            m_EndEpisode = false;
-
-            foreach (var current in Sensors)
-            {
-                var xform = current.Transform;
-                var hit = Physics.Raycast(AgentSensorTransform.position, xform.forward, out var hitInfo,
-                    current.RayDistance, Mask, QueryTriggerInteraction.Ignore);
-            
-                if(ShowRayCast)
-                {
-                    Debug.DrawRay(AgentSensorTransform.position, xform.forward * current.RayDistance, Color.green);
-                    Debug.DrawRay(AgentSensorTransform.position, xform.forward * current.HitValidationDistance, Color.red);
-
-                    if (hit && hitInfo.distance < current.HitValidationDistance) {
-                        Debug.DrawRay(hitInfo.point, Vector3.up * 3.0f, Color.blue);
-                    }
-                }
-
-                if(hit)
-                {
-                    if(hitInfo.distance < current.HitValidationDistance)
-                    {
-                        m_LastAccumulatedReward += HitPenalty;
-                        m_EndEpisode = true;
-                    }
-                }
-
-                sensor.AddObservation(hit ? hitInfo.distance : current.RayDistance);
-            }
-            sensor.AddObservation(m_Acceleration);
-        }
-
-        // the output of the AI model, the vector(??) of next movement
-        // Called every time the Agent receives an action to take. Receives the action chosen by the Agent. It is also common to assign a reward in this method.
-        public override void OnActionReceived(ActionBuffers actions)
-        {
-            base.OnActionReceived(actions);
-            InterpretDiscreteActions(actions);
-            // TODO Add your rewards/penalties
-
-            var next = (m_CheckpointIndex + 1) % Checkpoints.Length;
-            var nextCheckPoint = Checkpoints[next];
-            var direction = (nextCheckPoint.transform.position - m_Kart.transform.position).normalized;
-            var reward = Vector3.Dot(m_Kart.Rigidbody.velocity.normalized, direction);
-
-            if (ShowRayCast)
-            {
-                Debug.DrawRay(AgentSensorTransform.position, m_Kart.Rigidbody.velocity, Color.blue);
-            }
-
-            AddReward(reward * TowardsCheckpointRewards);
-            AddReward((m_Acceleration && !m_Brake ? 1.0f : 0.0f) * AccelerationReward);
-            AddReward(m_Kart.LocalSpeed() * SpeedReward);
-        }
-
-        private void InterpretDiscreteActions(ActionBuffers actions)
-        {
-            Debug.Log("Action 0: " + actions.DiscreteActions[0]); // action 1 means turn or not
-            Debug.Log("Action 1: " + actions.DiscreteActions[1]); // action 2 means acceleration or not
-
-            m_Steering = actions.DiscreteActions[0] - 1f;
-            m_Acceleration = actions.DiscreteActions[1] >= 1.0f;
-            m_Brake = actions.DiscreteActions[1] < 1.0f;
-        }
 
         /**
           When the Behavior Type is set to Heuristic Only in the Behavior Parameters of the Agent, 
