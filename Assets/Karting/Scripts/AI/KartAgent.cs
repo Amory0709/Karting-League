@@ -90,6 +90,7 @@ namespace KartGame.AI
         private bool m_EndEpisode;
         private float m_LastAccumulatedReward;
         private float m_startTime = 0;
+        private int m_loopCount = 0;
         private void Awake()
         {
             m_Kart = GetComponent<ArcadeKart>();
@@ -299,6 +300,7 @@ namespace KartGame.AI
                     break;
             }
             m_startTime = Time.time;
+            m_loopCount = 0;
         }
 
         void OnTriggerEnter(Collider other)
@@ -317,9 +319,15 @@ namespace KartGame.AI
                 {
                     // a loop
                     float spentTime = Time.time - m_startTime;
-                    Debug.Log($"Finish a loop, spend time:{spentTime}");
+                    Debug.Log($"Finish a loop({m_loopCount}), spend time:{spentTime}");
                     m_startTime = Time.time;
-                    AddReward(100 / spentTime);
+                    AddReward(300 / spentTime);
+                    m_loopCount++;
+                    if (m_loopCount >= 3)
+                    {
+                        m_EndEpisode = true;
+                    }
+
                     // TODO: award according to spent time
                 }
                 m_CheckpointIndex = index;
