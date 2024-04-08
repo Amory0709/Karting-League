@@ -66,7 +66,7 @@ namespace KartGame.AI
         public float SpeedReward = 0.005f;
 
         [Tooltip("Reward the agent when it keeps accelerating")]
-        public float AccelerationReward = 0.1f;
+        public float AccelerationReward = 0.001f;
         #endregion
 
         #region ResetParams
@@ -292,7 +292,9 @@ namespace KartGame.AI
                     InitCheckpointIndex = m_CheckpointIndex;
                     var collider = Checkpoints[m_CheckpointIndex];
 
-                    transform.localRotation = collider.transform.rotation;
+                    var random = Random.rotation.normalized;
+                    transform.localRotation = collider.transform.rotation * Quaternion.Euler(Random.Range(-45, 45), Random.Range(-45, 45), 0);
+                    Debug.Log($"===EpisodeBegin=== checkpoint rotation:{collider.transform.rotation}, localLotation:{transform.localRotation}");
                     transform.position = collider.transform.position;
                     m_Kart.Rigidbody.velocity = default;
                     m_Acceleration = false;
@@ -358,7 +360,9 @@ namespace KartGame.AI
             // TODO Add your observations
             // For example
             sensor.AddObservation(m_Kart.LocalSpeed());
-
+            //var next = (m_CheckpointIndex + 1) % Checkpoints.Length;
+            //var nextCollider = Checkpoints[next];
+            //sensor.AddObservation(nextCollider.transform.position);
             foreach (var current in Sensors)
             {
                 var xform = current.Transform;
