@@ -4,7 +4,7 @@ default_settings:
   trainer_type: ppo # [Common] default = ppo | type of trainer | Types: ppo, sac, poca
   summary_freq: 100 # [Common] default = 50000 | # of exp before get statistics | Typical range: none
   time_horizon: 64 # [Common] default = 64 | # of exp steps per agent before add exp to buffer | Typical range: 32 ~ 2048
-  max_steps: 5.0e10 # [Common] default = 500000 | Total number of steps before training end | Typical range: 5e5 ~ 1e7
+  max_steps: 5.0e6 # [Common] default = 500000 | Total number of steps before training end | Typical range: 5e5 ~ 1e7
   keep_checkpoints: 8 # [Common] default = 5 | max checkpoints to save. pass a checkpoint_interval -> save a checkpoint, more than this number, drop the oldest one | Typical range: none
   # even_checkpoints: false # [Common] default = false | true -> ignore `checkpoint_interval` and evenly distributes checkpoints (Useful for cataloging agent behavior throughout training) |  Typical range: none
   checkpoint_interval: 10000 # [Common] default = 500000 | The number of experiences collected between each checkpoint by the trainer (Each checkpoint saves the .onnx files in results/ folder)| Typical range: none
