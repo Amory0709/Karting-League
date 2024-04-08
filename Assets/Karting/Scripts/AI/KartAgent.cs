@@ -26,7 +26,7 @@ namespace KartGame.AI
         public AgentMode Mode = AgentMode.Training;
 
         [Tooltip("What is the initial checkpoint the agent will go to? This value is only for inferencing. It is set to a random number in training mode")]
-        private ushort InitCheckpointIndex = 0;
+        private int InitCheckpointIndex = 0;
         #endregion
 
         #region Senses
@@ -54,7 +54,7 @@ namespace KartGame.AI
         // For example:
         [Header("Rewards")]
         [Tooltip("What penalty is given when the agent crashes?")]
-        public float Penalty = -1;
+        public float Penalty = -3;
 
         [Tooltip("How much reward is given when the agent successfully passes the checkpoints?")]
         public float PassCheckpointReward = 1f;
@@ -89,8 +89,7 @@ namespace KartGame.AI
 
         private bool m_EndEpisode;
         private float m_LastAccumulatedReward;
-        private int m_checkHit = 0;
-
+        private float m_startTime = 0;
         private void Awake()
         {
             m_Kart = GetComponent<ArcadeKart>();
@@ -215,16 +214,6 @@ namespace KartGame.AI
                 m_CheckpointIndex = InitCheckpointIndex;
         }
 
-        private void Update()
-        {
-            //Debug.Log("==============m_Kart.transform===============");
-            //Debug.Log(m_Kart.transform);
-            //Ray ray = new Ray(transform.position, transform.forward);
-            //Debug.Log("==============ray.transform===============");
-            //Debug.Log(ray);
-            //Debug.DrawLine(ray.origin, ray.origin + ray.direction * 100, Color.red);
-
-        }
 
         private void LateUpdate()
         {
@@ -245,10 +234,6 @@ namespace KartGame.AI
                         m_Acceleration = m_Brake = false;
                     }
                     break;
-                case AgentMode.Training:
-
-
-                    break;
             }
         }
         private void FixedUpdate()
@@ -260,17 +245,10 @@ namespace KartGame.AI
             if (m_EndEpisode)
             {
                 m_EndEpisode = false;
-                //AddReward(m_LastAccumulatedReward);
                 EndEpisode();
-                Debug.Log(" -----------CURRENT SCORE: " + m_Kart.Score + "---------------------");
-                //OnEpisodeBegin();
             }
-            Debug.Log("LastUpdate=====m_Kart====" + Time.frameCount);
-            Debug.Log(m_Kart.transform.position);
-            Debug.Log("=====AgentSensorTransform====");
-            Debug.Log(AgentSensorTransform.position);
 
-            // TODO Add your rewards/penalties
+            // Add your rewards/penalties
             for (int i = 0; i < Sensors.Length; i++)
             {
                 if (i == 0 || i == 1 || i == 5 || i == 6)
@@ -279,26 +257,16 @@ namespace KartGame.AI
                 }
                 var current = Sensors[i];
                 var xform = current.Transform;
-                var hit2 = Physics.Raycast(AgentSensorTransform.position, xform.forward, out var hitInfo,
+                var hit = Physics.Raycast(AgentSensorTransform.position, xform.forward, out var hitInfo,
                     1f, Mask, QueryTriggerInteraction.Ignore);
                 Debug.DrawLine(AgentSensorTransform.position, AgentSensorTransform.position + xform.forward * 5, Color.blue);
-                if (hit2)
+                if (hit)
                 {
-                    Debug.Log("=====HIT EDGE!!!====");
-                    m_checkHit = 0;
-                    Debug.Log("=====hitInfo====");
-                    Debug.Log(hitInfo.point);
                     Debug.DrawLine(AgentSensorTransform.position, hitInfo.point, Color.red);
                     m_EndEpisode = true;
-                    AddReward(Penalty * 3);
+                    AddReward(Penalty);
                 }
             }
-            foreach (var current in Sensors)
-            {
-
-
-            }
-
         }
 
         public InputData GenerateInput()
@@ -314,13 +282,13 @@ namespace KartGame.AI
         public override void OnEpisodeBegin()
         {
             m_Steering = 0f;
-            Debug.Log("============OnEpisodeBegin===============");
             InitialiseResetParameters();
             InitializeSenses();
             switch (Mode)
             {
                 case AgentMode.Training:
                     m_CheckpointIndex = Random.Range(0, Checkpoints.Length - 1);
+                    InitCheckpointIndex = m_CheckpointIndex;
                     var collider = Checkpoints[m_CheckpointIndex];
 
                     transform.localRotation = collider.transform.rotation;
@@ -328,14 +296,9 @@ namespace KartGame.AI
                     m_Kart.Rigidbody.velocity = default;
                     m_Acceleration = false;
                     m_Brake = false;
-                    Debug.Log(m_Kart.transform.position);
-                    Debug.Log(AgentSensorTransform.position);
-                    Debug.Log(AgentSensorTransform.parent.name);
-                    Debug.Log(AgentSensorTransform.transform.parent.name);
                     break;
             }
-            Debug.Log("============OnEpisodeBegin1===============");
-
+            m_startTime = Time.time;
         }
 
         void OnTriggerEnter(Collider other)
@@ -350,6 +313,15 @@ namespace KartGame.AI
             if (triggered > 0 && index > m_CheckpointIndex || index == 0 && m_CheckpointIndex == Checkpoints.Length - 1)
             {
                 AddReward(PassCheckpointReward);
+                if (index == InitCheckpointIndex)
+                {
+                    // a loop
+                    float spentTime = Time.time - m_startTime;
+                    Debug.Log($"Finish a loop, spend time:{spentTime}");
+                    m_startTime = Time.time;
+                    AddReward(100 / spentTime);
+                    // TODO: award according to spent time
+                }
                 m_CheckpointIndex = index;
             }
 
