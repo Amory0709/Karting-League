@@ -291,8 +291,8 @@ namespace KartGame.AI
         {
             var decisionRequester = GetComponent<DecisionRequester>();
             //TODO set your decision requester
-            //decisionRequester.DecisionPeriod = 1;
-            //decisionRequester.TakeActionsBetweenDecisions = true;
+            decisionRequester.DecisionPeriod = 1;
+            decisionRequester.TakeActionsBetweenDecisions = true;
         }
 
         private void InitialiseResetParameters()
@@ -314,38 +314,38 @@ namespace KartGame.AI
             {
                 Transform = transform.Find("MLAgent_Sensors/-90"),
                 HitValidationDistance = 1f,
-                RayDistance = 100
+                RayDistance = 50
             };
-            Debug.Log(Sensors[0]);
+
             Sensors[1] = new Sensor
             {
                 Transform = transform.Find("MLAgent_Sensors/-60"),
                 HitValidationDistance = 1.5f,
-                RayDistance = 100
+                RayDistance = 50
             };
             Sensors[2] = new Sensor
             {
                 Transform = transform.Find("MLAgent_Sensors/-30"),
                 HitValidationDistance = 1.8f,
-                RayDistance = 100
+                RayDistance = 50
             };
             Sensors[3] = new Sensor
             {
                 Transform = transform.Find("MLAgent_Sensors/0"),
                 HitValidationDistance = 3f,
-                RayDistance = 100
+                RayDistance = 50
             };
             Sensors[4] = new Sensor
             {
                 Transform = transform.Find("MLAgent_Sensors/30"),
                 HitValidationDistance = 1.8f,
-                RayDistance = 100
+                RayDistance = 50
             };
             Sensors[5] = new Sensor
             {
                 Transform = transform.Find("MLAgent_Sensors/60"),
                 HitValidationDistance = 1.5f,
-                RayDistance = 100,
+                RayDistance = 50,
 
             };
             Sensors[6] = new Sensor
@@ -358,13 +358,13 @@ namespace KartGame.AI
             {
                 Transform = transform.Find("MLAgent_Sensors/45"),
                 HitValidationDistance = 1.7f,
-                RayDistance = 100
+                RayDistance = 50
             };
             Sensors[8] = new Sensor
             {
                 Transform = transform.Find("MLAgent_Sensors/-45"),
                 HitValidationDistance = 1.7f,
-                RayDistance = 100
+                RayDistance = 50
             };
 
             // set Mask
@@ -478,17 +478,6 @@ namespace KartGame.AI
                 {
                     Debug.DrawLine(AgentSensorTransform.position, AgentSensorTransform.position + xform.forward * TrainnigConfigInfo.CollisionRadius, Color.yellow);
                 }
-
-                //if (hit2 )
-                //{
-                //    AddReward(Penalty);
-
-                //    if (((1 << hitInfo.collider.gameObject.layer) & TrackMask) > 0)
-                //    {
-                //        m_EndEpisode = true;
-
-                //    }
-                //}
 
             }
         }
@@ -836,19 +825,22 @@ namespace KartGame.AI
             // TODO Add your observations
             // For example
             sensor.AddObservation(m_Kart.LocalSpeed());
+            sensor.AddObservation(m_Kart.Rigidbody.velocity);
             var nextCollider = Checkpoints[m_targetingCheckpointIndex];
             var directionNext = (nextCollider.transform.position - m_Kart.transform.position).normalized;
+            var directionAngle = Vector3.Angle(directionNext, m_Kart.transform.forward);
             sensor.AddObservation(directionNext);
-            var nextNext = Checkpoints[(m_targetingCheckpointIndex + 1) % Checkpoints.Length];
-            var directionNextNext = (nextNext.transform.position - m_Kart.transform.position).normalized;
-            sensor.AddObservation(directionNextNext);
+            sensor.AddObservation(directionAngle);
+          
             foreach (var current in Sensors)
             {
                 var xform = current.Transform;
                 var hit = Physics.Raycast(AgentSensorTransform.position, xform.forward, out var hitInfo,
                     current.RayDistance, Mask, QueryTriggerInteraction.Ignore);
+                var angle = Vector3.Angle(xform.forward, m_Kart.Rigidbody.velocity);
 
                 sensor.AddObservation(hit ? hitInfo.distance : current.RayDistance);
+                sensor.AddObservation(angle);  
             }
         }
 
@@ -866,9 +858,6 @@ namespace KartGame.AI
             m_Steering = actions.DiscreteActions[0] - 1f;
             m_Acceleration = actions.DiscreteActions[1] >= 1.0f;
             m_Brake = actions.DiscreteActions[1] < 1.0f;
-
-            Action0 = actions.DiscreteActions[0] - 1;
-            Action1 = actions.DiscreteActions[1];
         }
 
         public override void Heuristic(in ActionBuffers actionsOut)
@@ -894,21 +883,5 @@ namespace KartGame.AI
             }
         }
 
-        //private float RightDirection()
-        //{
-        //    // Find the next checkpoint when registering the current checkpoint that the agent has passed.
-        //    var next = (m_CheckpointIndex + 1) % Checkpoints.Length;
-        //    var nextCollider = Checkpoints[next];
-        //    if (nextCollider != null)
-        //    {
-        //        var direction = (nextCollider.transform.position - m_Kart.transform.position).normalized;
-        //        var reward = Vector3.Dot(m_Kart.Rigidbody.velocity.normalized, direction);
-        //        return reward;
-        //    }
-        //    else
-        //    {
-        //        return 0f;
-        //    }
-        //}
     }
 }
