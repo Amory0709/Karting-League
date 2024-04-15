@@ -870,14 +870,30 @@ namespace KartGame.AI
             Action0 = actions.DiscreteActions[0] - 1;
             Action1 = actions.DiscreteActions[1];
         }
+
         public override void Heuristic(in ActionBuffers actionsOut)
         {
+            base.Heuristic(actionsOut);
             ActionSegment<int> discreteActions = actionsOut.DiscreteActions;
-            discreteActions[0] = (int)Input.GetAxis("Horizontal") + 1;// z
-
-            discreteActions[1] = (int)Input.GetAxis("Vertical"); // x
-            // can be  created from user input
+            var steer = Input.GetAxis("Horizontal");
+            if (steer == 0)
+            {
+                discreteActions[0] = 0;
+            }
+            else
+            {
+                discreteActions[0] = steer > 0 ? 1 : -1;
+            }
+            if (Input.GetButton("Accelerate"))
+            {
+                discreteActions[1] = 1;
+            }
+            if (Input.GetButton("Brake"))
+            {
+                discreteActions[1] = 0;
+            }
         }
+
         //private float RightDirection()
         //{
         //    // Find the next checkpoint when registering the current checkpoint that the agent has passed.
