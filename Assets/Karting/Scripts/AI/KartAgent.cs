@@ -85,6 +85,8 @@ namespace KartGame.AI
         [Tooltip("If the kart is collided")]
         public bool Collided = false;
 
+        public float Speed = 0;
+
         #endregion Inspectors
 
         #region Private
@@ -106,10 +108,13 @@ namespace KartGame.AI
         private int m_stuckedFrames = 0;
         private int m_collidedFrames = 0;
         private int m_wrongDirectionFrames = 0;
-        public float m_wrongDirectionAccumulate = 0;
         public float m_rightDirectionFrames = 0;
-        public float m_deltaCollisionPanelty = 0f;
-        private Vector3[] m_contactPoints = new Vector3[3];
+
+        private float m_quickStopPenalty = 0;
+
+        // Debug Ray
+        private float m_raycastMaxDistance = 100f;
+        private float m_collisionRadius = 1.0f;
 
         #endregion Private
 
@@ -120,7 +125,7 @@ namespace KartGame.AI
             [Tooltip("How many loops finished that will end the episode")]
             public int EpisodeMaxLoopCount = 1;
 
-            [Tooltip("How many frames will it be considered as stucked when kart moves less than a distance")]
+            [Tooltip("How many frames passed when it is not moving (moves less than a distance) then it is considered as stucked when kart")]
             public int StuckedFramesThreshold = 50;
 
             [Tooltip("How many frames will it can be stucked, it will end episode if stucked framres exceeds this MaxStuckedFrames")]
@@ -129,25 +134,19 @@ namespace KartGame.AI
             [Tooltip("How many frames will it can be collided, it will end episode if collided frames exceeds this MaxCollidedFrames")]
             public int MaxCollidedFrames = 1;
 
-            [Tooltip("Max Panelty in wrong direction, it will end episode if wrong Panelty  exceeds this MaxWrongDirectionPanelty")]
+            [Tooltip("Max Penalty in wrong direction, it will end episode if wrong Penalty  exceeds this MaxWrongDirectionPenalty")]
             public int MaxWrongDirectionFrames = 20;
 
             public int MaxRightDirectionFrames = -1;
 
-            public float MaxNegativeRewards = -15000f;
+            public float QuickStopPenalty_Collision = -10f;
+            public float QuickStopPenalty_WrongDirection = -10f;
+            public float QuickStopPenalty_Stucked = -10f;
 
             [Header("Training Parameters")]
 
             [Tooltip("How much random deviation range is when start training?")]
             public int Deviation_TraningStart = 0;
-
-            [Header("RaycastMaxDistance")]
-            [Tooltip("The max detected distance in the sensers directions")]
-            public float RaycastMaxDistance = 100f;
-
-            [Header("CollisionRadius")]
-            [Tooltip("When sensor rays hit others and the distance is less than this value, we consider they are collided, should be similar to the car's size")]
-            public float CollisionRadius = 1.0f;
 
             public float DistanceThresholdStucked = 0.5f;
             public float EscapeStuckedDistance = 1f;
@@ -233,8 +232,8 @@ namespace KartGame.AI
             // TODO set other behavior parameters according to your own agent implementation, especially following ones:
             behaviorParameters.BehaviorType = BehaviorType.Default;
             behaviorParameters.BehaviorName = "SixGods";
-            behaviorParameters.BrainParameters.VectorObservationSize = 16; // size of the ML input data, should be the same as the `AddObservation` number
-            behaviorParameters.BrainParameters.NumStackedVectorObservations = 4;
+            behaviorParameters.BrainParameters.VectorObservationSize = 19; // size of the ML input data, should be the same as the `AddObservation` number
+            behaviorParameters.BrainParameters.NumStackedVectorObservations = 20;
             behaviorParameters.BrainParameters.ActionSpec = ActionSpec.MakeDiscrete(3, 2); // format of the ML model output data [0, 1, 2] [0, 1, 2]
 
         }
@@ -264,10 +263,7 @@ namespace KartGame.AI
             m_collidedFrames = 0;
             m_wrongDirectionFrames = 0;
             m_rightDirectionFrames = 0;
-            m_deltaCollisionPanelty = 0f;
-            m_contactPoints[0] = Vector3.zero;
-            m_contactPoints[1] = Vector3.zero;
-            m_contactPoints[2] = Vector3.zero;
+            m_quickStopPenalty = 0;
         }
 
 
@@ -436,14 +432,14 @@ namespace KartGame.AI
                 var current = Sensors[i];
                 var xform = current.Transform;
                 var hit = Physics.Raycast(AgentSensorTransform.position, xform.forward, out var hitInfo,
-                    TrainingConfigInfo.RaycastMaxDistance, Mask, QueryTriggerInteraction.Ignore);
+                    m_raycastMaxDistance, Mask, QueryTriggerInteraction.Ignore);
 
-                var endPoint = AgentSensorTransform.position + xform.forward * TrainingConfigInfo.RaycastMaxDistance;
+                var endPoint = AgentSensorTransform.position + xform.forward * m_raycastMaxDistance;
                 bool drawKartRadius = true;
                 Color color = Color.blue;
                 if (hit)
                 {
-                    if (hitInfo.distance <= TrainingConfigInfo.CollisionRadius)
+                    if (hitInfo.distance <= m_collisionRadius)
                     {
                         color = Color.red;
                         drawKartRadius = false;
@@ -451,19 +447,17 @@ namespace KartGame.AI
                     else
                     {
                         endPoint = hitInfo.point;
-
                     }
                 }
 
                 Debug.DrawLine(AgentSensorTransform.position, endPoint, color);
                 if (drawKartRadius)
                 {
-                    Debug.DrawLine(AgentSensorTransform.position, AgentSensorTransform.position + xform.forward * TrainingConfigInfo.CollisionRadius, Color.yellow);
+                    Debug.DrawLine(AgentSensorTransform.position, AgentSensorTransform.position + xform.forward * m_collisionRadius, Color.yellow);
                 }
                 if (Stucked)
                 {
                     Debug.DrawLine(AgentSensorTransform.position, m_checkPosition, Color.black);
-
                 }
             }
         }
@@ -491,12 +485,14 @@ namespace KartGame.AI
 
         private void FixedUpdate()
         {
-            DrawDetectingRays();
-
             if (Mode == AgentMode.Inferencing)
             {
                 return;
             }
+            DrawDetectingRays();
+
+            UpdateKartStatusRewards();
+
             RuntimeRewards.OverallRewards
                    = RuntimeRewards.TotalSpeedReward
                    + RuntimeRewards.TotalTowardsCheckpointReward
@@ -508,12 +504,6 @@ namespace KartGame.AI
                    + RuntimeRewards.TotalStuckPenalty
                    + RuntimeRewards.TotalStayCollisionPenalty
                    + RuntimeRewards.TotalTriggerCollisionPenalty;
-            if (RuntimeRewards.OverallRewards < TrainingConfigInfo.MaxNegativeRewards)
-            {
-                Debug.Log("[Quick Stop Training Episode Ended] MaxNegativeRewards Exceeded");
-                m_EndEpisode = true;
-                AddReward(RewardsConfig.LastAccumulatedReward * 100000, ref RuntimeRewards.TotalLastAccumulatedReward);
-            }
             if (m_EndEpisode)
             {
                 m_EndEpisode = false;
@@ -522,7 +512,8 @@ namespace KartGame.AI
                 Debug.Log($"[Episode Ended],[Penalty] " +
                     $"Stuck:{RuntimeRewards.TotalStuckPenalty}, " +
                     $"StayCollision:{RuntimeRewards.TotalStayCollisionPenalty}, " +
-                    $"TriggerCollision:{RuntimeRewards.TotalTriggerCollisionPenalty}.");
+                    $"TriggerCollision:{RuntimeRewards.TotalTriggerCollisionPenalty}." +
+                    $"QuickStopPenalty:{RuntimeRewards.TotalTriggerCollisionPenalty}.");
                 Debug.Log($"[Episode Ended], [Reward]" +
                    $"Speed:{RuntimeRewards.TotalSpeedReward}, " +
                    $"TowardsCheckpoint:{RuntimeRewards.TotalTowardsCheckpointReward}, " +
@@ -533,6 +524,7 @@ namespace KartGame.AI
                    $"FinishCheckpointAverageSpeedReward:{RuntimeRewards.TotalFinishCheckpointAverageSpeedReward}");
                 EndEpisode();
             }
+            Speed = m_Kart.LocalSpeed();
 
         }
 
@@ -543,28 +535,29 @@ namespace KartGame.AI
             float speed = m_Kart.LocalSpeed();
             Debug.Log($"[OnCollisionEnter],kart speed:{speed}, kart forward:{m_Kart.transform.forward}");
             Collided = true;
-            for (int i = 0; i < collision.contactCount; i++)
-            {
-                var contact = collision.GetContact(i);
-                var direction = (contact.point - transform.position).normalized;
-                float speedFactor = 0;
-                if (speed > 0f)
-                {
-                    speedFactor = 1f;
-                }
-                else if (speed < 0f)
-                {
-                    speedFactor = -1f;
-                }
-                var factor = Vector3.Dot(direction, m_Kart.Rigidbody.velocity);
-                if (factor > 0f)
-                {
-                    var panelty = factor * RewardsConfig.TriggerCollisionPenalty;
-                    AddReward(panelty, ref RuntimeRewards.TotalTriggerCollisionPenalty);
-                    m_deltaCollisionPanelty += panelty;
-                }
-            }
-            m_checkPosition = transform.position;
+            //for (int i = 0; i < collision.contactCount; i++)
+            //{
+            //    var contact = collision.GetContact(i);
+            //    var direction = (contact.point - transform.position).normalized;
+            //    float speedFactor = 0;
+            //    if (speed > 0f)
+            //    {
+            //        speedFactor = 1f;
+            //    }
+            //    else if (speed < 0f)
+            //    {
+            //        speedFactor = -1f;
+            //    }
+            //    var factor = Vector3.Dot(direction, m_Kart.Rigidbody.velocity);
+            //    if (factor > 0f)
+            //    {
+            //        var RewardsConfig.LastAccumulatedReward * 100000 = factor * RewardsConfig.TriggerCollisionPenalty;
+            //        AddReward(penalty, ref RuntimeRewards.TotalTriggerCollisionPenalty);
+            //        m_deltaCollisionPenalty += penalty;
+            //    }
+            //}
+            m_collidedFrames++;
+            //m_checkPosition = transform.position;
         }
         private void OnCollisionStay(Collision collision)
         {
@@ -574,10 +567,10 @@ namespace KartGame.AI
             {
                 var contact = collision.GetContact(i);
                 var direction = (contact.point - transform.position).normalized;
-                if (i < 3)
-                {
-                    m_contactPoints[i] = contact.point;
-                }
+                //if (i < 3)
+                //{
+                //    m_contactPoints[i] = contact.point;
+                //}
                 //float speedFactor = 0;
                 //if (speed > 0f)
                 //{
@@ -590,28 +583,26 @@ namespace KartGame.AI
                 //var factor = Vector3.Dot(direction, m_Kart.transform.forward * speed);
                 //var factor2 = Vector3.Dot(direction, m_Kart.transform.forward);
                 //AddReward((factor + factor2) * RewardsConfig.StayCollisionPenalty, ref RuntimeRewards.TotalStayCollisionPenalty);
-                //m_deltaCollisionPanelty += (factor + factor2) * RewardsConfig.StayCollisionPenalty;
+                //m_deltaCollisionPenalty += (factor + factor2) * RewardsConfig.StayCollisionPenalty;
             }
             AddReward(RewardsConfig.StayCollisionPenalty, ref RuntimeRewards.TotalStayCollisionPenalty);
 
-            m_deltaCollisionPanelty += RewardsConfig.StayCollisionPenalty;
+            //m_deltaCollisionPenalty += RewardsConfig.StayCollisionPenalty;
             //AddReward(RewardsConfig.StayCollisionPenalty * m_collidedFrames, ref RuntimeRewards.TotalStayCollisionPenalty);
             m_collidedFrames++;
             if (m_collidedFrames > TrainingConfigInfo.MaxCollidedFrames)
             {
                 Debug.Log("[Quick Stop Training Episode Ended] MaxCollidedFrames Exceeded");
                 m_EndEpisode = true;
-                AddReward(RewardsConfig.LastAccumulatedReward * 100000, ref RuntimeRewards.TotalLastAccumulatedReward);
+                AddReward(TrainingConfigInfo.QuickStopPenalty_Collision, ref m_quickStopPenalty);
             }
-            m_checkPosition = transform.position;
+            //m_checkPosition = transform.position;
         }
 
         private void OnCollisionExit(Collision collision)
         {
             Debug.Log("[OnCollisionExit]");
             m_collidedFrames = 0;
-            AddReward(-m_deltaCollisionPanelty / 2, ref RuntimeRewards.TotalStayCollisionPenalty);
-            m_deltaCollisionPanelty = 0;
             Collided = false;
         }
         private void OnTriggerExit(Collider other)
@@ -718,7 +709,7 @@ namespace KartGame.AI
             var nextCollider = Checkpoints[m_targetingCheckpointIndex];
             var direction1 = (nextCollider.transform.position - m_Kart.transform.position).normalized;
             var reward = Vector3.Dot(m_Kart.Rigidbody.velocity, direction1);
-            if (!Stucked && !Collided)
+            if (!Collided)
             {
                 if (reward < 0)
                 {
@@ -751,7 +742,7 @@ namespace KartGame.AI
             {
                 Debug.Log("[Quick Stop Training Episode Ended] MaxWrongDirectionFrames Exceeded");
                 m_EndEpisode = true;
-                AddReward(RewardsConfig.LastAccumulatedReward * 100000, ref RuntimeRewards.TotalLastAccumulatedReward);
+                AddReward(TrainingConfigInfo.QuickStopPenalty_WrongDirection, ref m_quickStopPenalty);
             }
             if (m_rightDirectionFrames > TrainingConfigInfo.MaxRightDirectionFrames && (TrainingConfigInfo.MaxRightDirectionFrames > 0))
             {
@@ -765,29 +756,12 @@ namespace KartGame.AI
             if (Stucked)
             {
                 m_stuckedFrames++;
-                if (moved < TrainingConfigInfo.DistanceThresholdStucked)
-                {
-                    float coefficientA = 1f;
-                    if (TrainingConfigInfo.DistanceThresholdStucked > 0)
-                    {
-                        coefficientA = 1 - moved / TrainingConfigInfo.DistanceThresholdStucked;
-                    }
-                    AddReward(RewardsConfig.StuckPenalty * coefficientA, ref RuntimeRewards.TotalStuckPenalty);
-
-                }
-                else if (TrainingConfigInfo.EscapeStuckedDistance > TrainingConfigInfo.DistanceThresholdStucked)
-                {
-
-                    var a = -1 / (TrainingConfigInfo.EscapeStuckedDistance - TrainingConfigInfo.DistanceThresholdStucked);
-                    var b = TrainingConfigInfo.DistanceThresholdStucked / (TrainingConfigInfo.EscapeStuckedDistance - TrainingConfigInfo.DistanceThresholdStucked);
-                    AddReward(RewardsConfig.StuckPenalty * (a * moved + b), ref RuntimeRewards.TotalStuckPenalty);
-                }
 
                 if (m_stuckedFrames > (TrainingConfigInfo.MaxStuckedFrames + TrainingConfigInfo.StuckedFramesThreshold))
                 {
                     Debug.Log("[Quick Stop Training Episode Ended] MaxStuckedFrames Exceeded");
                     m_EndEpisode = true;
-                    AddReward(RewardsConfig.LastAccumulatedReward * 100000, ref RuntimeRewards.TotalLastAccumulatedReward);
+                    AddReward(TrainingConfigInfo.QuickStopPenalty_Stucked, ref m_quickStopPenalty);
                 }
 
                 // escape from stuck status
@@ -796,9 +770,6 @@ namespace KartGame.AI
                     Stucked = false;
                     m_checkPosition = transform.position;
                     m_stuckedFrames = 0;
-                    m_contactPoints[0] = Vector3.zero;
-                    m_contactPoints[1] = Vector3.zero;
-                    m_contactPoints[2] = Vector3.zero;
                 }
 
             }
@@ -812,14 +783,18 @@ namespace KartGame.AI
                         Stucked = true;
                     }
                 }
+                else
+                {
+                    m_checkPosition = transform.position;
+                }
             }
-            if (Stucked)
-            {
-                var direction = (m_checkPosition - transform.position).normalized;
+            //if (Stucked)
+            //{
+            //    var direction = (m_checkPosition - transform.position).normalized;
 
-                var factor = Vector3.Dot(direction, m_Kart.Rigidbody.velocity / m_Kart.GetMaxSpeed());
-                AddReward(factor * RewardsConfig.StuckPenalty, ref RuntimeRewards.TotalStuckPenalty);
-            }
+            //    var factor = Vector3.Dot(direction, m_Kart.Rigidbody.velocity / m_Kart.GetMaxSpeed());
+            //    AddReward(factor * RewardsConfig.StuckPenalty, ref RuntimeRewards.TotalStuckPenalty);
+            //}
 
         }
 
@@ -860,6 +835,7 @@ namespace KartGame.AI
             sensor.AddObservation(m_Kart.LocalSpeed());
             var nextCollider = Checkpoints[m_targetingCheckpointIndex];
             var directionNext = (nextCollider.transform.position - m_Kart.transform.position).normalized;
+            //sensor.AddObservation(transform.position);
             sensor.AddObservation(directionNext);
             sensor.AddObservation(m_Kart.Rigidbody.velocity);
             foreach (var current in Sensors)
@@ -877,7 +853,6 @@ namespace KartGame.AI
             base.OnActionReceived(actions);
             InterpretDiscreteActions(actions);
 
-            UpdateKartStatusRewards();
 
             //Find the next checkpoint when registering the current checkpoint that the agent has passed.
         }
