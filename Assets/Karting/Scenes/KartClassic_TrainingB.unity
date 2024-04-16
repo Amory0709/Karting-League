@@ -13479,6 +13479,57 @@ MonoBehaviour:
   hasUpgradedFromAgentParameters: 1
   MaxStep: 0
   Mode: 1
+  Mask:
+    serializedVersion: 2
+    m_Bits: 0
+  Sensors: []
+  Checkpoints: []
+  CheckpointMask:
+    serializedVersion: 2
+    m_Bits: 0
+  AgentSensorTransform: {fileID: 0}
+  RewardsConfig:
+    TriggerCollisionPenalty: -0.01
+    StayCollisionPenalty: -0.002
+    StuckPenalty: -0.3
+    PassCheckpointReward: 10
+    FinishCheckpointAverageSpeedReward: 100
+    TowardsCheckpointReward: 0.001
+    SpeedReward: 0.0001
+    AccelerationReward: 0.0001
+    LoopSpentTimeRewardFactor: 5000
+    LastAccumulatedReward: -0.0005
+  RuntimeRewards:
+    TotalTriggerCollisionPenalty: 0
+    TotalStayCollisionPenalty: 0
+    TotalStuckPenalty: 0
+    TotalPassCheckpointReward: 0
+    TotalTowardsCheckpointReward: 0
+    TotalSpeedReward: 0
+    TotalAccelerationReward: 0
+    TotalLoopSpentTimeReward: 0
+    TotalLastAccumulatedReward: 0
+    TotalFinishCheckpointAverageSpeedReward: 0
+    OverallRewards: 0
+  TrainingConfigInfo:
+    EpisodeMaxLoopCount: 1
+    StuckedFramesThreshold: 500
+    MaxStuckedFrames: 2000
+    MaxCollidedFrames: 1
+    MaxWrongDirectionFrames: 200
+    MaxRightDirectionFrames: -1
+    QuickStopPenalty_Collision: -10
+    QuickStopPenalty_WrongDirection: -40
+    QuickStopPenalty_Stucked: -10
+    Deviation_TraningStart: 0
+    DistanceThresholdStucked: 0.5
+    EscapeStuckedDistance: 1.5
+    OffsetPoistion_StartTraining: {x: 0, y: 0, z: 0}
+  Stucked: 0
+  Collided: 0
+  Speed: 0
+  m_CheckpointIndex: 0
+  m_rightDirectionFrames: 0
 --- !u!114 &1663165981
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -13492,16 +13543,16 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_BrainParameters:
-    VectorObservationSize: 1
-    NumStackedVectorObservations: 1
+    VectorObservationSize: 16
+    NumStackedVectorObservations: 10
     m_ActionSpec:
       m_NumContinuousActions: 0
-      BranchSizes: 01000000
-    VectorActionSize: 01000000
+      BranchSizes: 0300000002000000
+    VectorActionSize: 0300000002000000
     VectorActionDescriptions: []
     VectorActionSpaceType: 0
     hasUpgradedBrainParametersWithActionSpec: 1
-  m_Model: {fileID: 0}
+  m_Model: {fileID: 5022602860645237092, guid: 2a8d1da8cd1cdb54c9f8883da86ae445, type: 3}
   m_InferenceDevice: 0
   m_BehaviorType: 0
   m_BehaviorName: My Behavior
