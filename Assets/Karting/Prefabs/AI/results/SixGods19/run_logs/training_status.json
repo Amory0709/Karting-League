@@ -1,0 +1,92 @@
+{
+    "SixGods": {
+        "checkpoints": [
+            {
+                "steps": 689946,
+                "file_path": "results\\SixGods19\\SixGods\\SixGods-689946.onnx",
+                "reward": 1060.9758183956146,
+                "creation_time": 1713284183.3339021,
+                "auxillary_file_paths": [
+                    "results\\SixGods19\\SixGods\\SixGods-689946.pt"
+                ]
+            },
+            {
+                "steps": 699959,
+                "file_path": "results\\SixGods19\\SixGods\\SixGods-699959.onnx",
+                "reward": 1321.867674107353,
+                "creation_time": 1713284220.1864367,
+                "auxillary_file_paths": [
+                    "results\\SixGods19\\SixGods\\SixGods-699959.pt"
+                ]
+            },
+            {
+                "steps": 709994,
+                "file_path": "results\\SixGods19\\SixGods\\SixGods-709994.onnx",
+                "reward": 1141.828795954585,
+                "creation_time": 1713284256.4243813,
+                "auxillary_file_paths": [
+                    "results\\SixGods19\\SixGods\\SixGods-709994.pt"
+                ]
+            },
+            {
+                "steps": 719969,
+                "file_path": "results\\SixGods19\\SixGods\\SixGods-719969.onnx",
+                "reward": 957.6206155180931,
+                "creation_time": 1713284292.320215,
+                "auxillary_file_paths": [
+                    "results\\SixGods19\\SixGods\\SixGods-719969.pt"
+                ]
+            },
+            {
+                "steps": 729954,
+                "file_path": "results\\SixGods19\\SixGods\\SixGods-729954.onnx",
+                "reward": 1314.8705950975418,
+                "creation_time": 1713284347.0585592,
+                "auxillary_file_paths": [
+                    "results\\SixGods19\\SixGods\\SixGods-729954.pt"
+                ]
+            },
+            {
+                "steps": 739978,
+                "file_path": "results\\SixGods19\\SixGods\\SixGods-739978.onnx",
+                "reward": 1700.7167175412178,
+                "creation_time": 1713284384.1170719,
+                "auxillary_file_paths": [
+                    "results\\SixGods19\\SixGods\\SixGods-739978.pt"
+                ]
+            },
+            {
+                "steps": 749988,
+                "file_path": "results\\SixGods19\\SixGods\\SixGods-749988.onnx",
+                "reward": 1829.3348021954298,
+                "creation_time": 1713284421.4020474,
+                "auxillary_file_paths": [
+                    "results\\SixGods19\\SixGods\\SixGods-749988.pt"
+                ]
+            },
+            {
+                "steps": 753591,
+                "file_path": "results\\SixGods19\\SixGods\\SixGods-753591.onnx",
+                "reward": 1680.4467224031687,
+                "creation_time": 1713284435.0454047,
+                "auxillary_file_paths": [
+                    "results\\SixGods19\\SixGods\\SixGods-753591.pt"
+                ]
+            }
+        ],
+        "final_checkpoint": {
+            "steps": 753591,
+            "file_path": "results\\SixGods19\\SixGods.onnx",
+            "reward": 1680.4467224031687,
+            "creation_time": 1713284435.0454047,
+            "auxillary_file_paths": [
+                "results\\SixGods19\\SixGods\\SixGods-753591.pt"
+            ]
+        }
+    },
+    "metadata": {
+        "stats_format_version": "0.3.0",
+        "mlagents_version": "0.28.0",
+        "torch_version": "1.7.1+cpu"
+    }
+}
