@@ -233,7 +233,7 @@ namespace KartGame.AI
             // TODO set other behavior parameters according to your own agent implementation, especially following ones:
             behaviorParameters.BehaviorType = BehaviorType.Default;
             behaviorParameters.BehaviorName = "SixGods";
-            behaviorParameters.BrainParameters.VectorObservationSize = 13; // size of the ML input data, should be the same as the `AddObservation` number
+            behaviorParameters.BrainParameters.VectorObservationSize = 16; // size of the ML input data, should be the same as the `AddObservation` number
             behaviorParameters.BrainParameters.NumStackedVectorObservations = 4;
             behaviorParameters.BrainParameters.ActionSpec = ActionSpec.MakeDiscrete(3, 2); // format of the ML model output data [0, 1, 2] [0, 1, 2]
 
@@ -377,16 +377,13 @@ namespace KartGame.AI
                     InitCheckpointIndex = m_CheckpointIndex;
                     m_targetingCheckpointIndex = (m_CheckpointIndex + 1) % Checkpoints.Length;
                     var collider = Checkpoints[m_CheckpointIndex];
-                    var random = Random.Range(-1, 1);
                     transform.localRotation
                         = collider.transform.rotation
                         * Quaternion.Euler(
-                            //Random.Range(-TrainingConfigInfo.RandomDeviation_TraningStart, TrainingConfigInfo.RandomDeviation_TraningStart),
-                            //Random.Range(-TrainingConfigInfo.RandomDeviation_TraningStart, TrainingConfigInfo.RandomDeviation_TraningStart),
                             0,
-                           random * TrainingConfigInfo.Deviation_TraningStart,
+                           TrainingConfigInfo.Deviation_TraningStart,
                             0);
-                    transform.position = collider.transform.position + random * TrainingConfigInfo.OffsetPoistion_StartTraining;
+                    transform.position = collider.transform.position + TrainingConfigInfo.OffsetPoistion_StartTraining;
                     m_checkPosition = transform.position;
                     m_Kart.Rigidbody.velocity = default;
                     m_Acceleration = false;
@@ -515,6 +512,7 @@ namespace KartGame.AI
             {
                 Debug.Log("[Quick Stop Training Episode Ended] MaxNegativeRewards Exceeded");
                 m_EndEpisode = true;
+                AddReward(RewardsConfig.LastAccumulatedReward * 100000, ref RuntimeRewards.TotalLastAccumulatedReward);
             }
             if (m_EndEpisode)
             {
@@ -543,7 +541,7 @@ namespace KartGame.AI
         private void OnCollisionEnter(Collision collision)
         {
             float speed = m_Kart.LocalSpeed();
-            Debug.Log($"[OnCollisionEnter],kart speed:{speed}, kart foward:{m_Kart.transform.forward}");
+            Debug.Log($"[OnCollisionEnter],kart speed:{speed}, kart forward:{m_Kart.transform.forward}");
             Collided = true;
             for (int i = 0; i < collision.contactCount; i++)
             {
@@ -558,7 +556,7 @@ namespace KartGame.AI
                 {
                     speedFactor = -1f;
                 }
-                var factor = Vector3.Dot(direction, m_Kart.transform.forward * speedFactor);
+                var factor = Vector3.Dot(direction, m_Kart.Rigidbody.velocity);
                 if (factor > 0f)
                 {
                     var panelty = factor * RewardsConfig.TriggerCollisionPenalty;
@@ -571,7 +569,7 @@ namespace KartGame.AI
         private void OnCollisionStay(Collision collision)
         {
             float speed = m_Kart.LocalSpeed();
-            Debug.Log($"[OnCollisionStay],kart speed:{speed}, kart foward:{m_Kart.transform.forward}");
+            Debug.Log($"[OnCollisionStay],kart speed:{speed}, kart velocity:{m_Kart.Rigidbody.velocity}");
             for (int i = 0; i < collision.contactCount; i++)
             {
                 var contact = collision.GetContact(i);
@@ -603,6 +601,7 @@ namespace KartGame.AI
             {
                 Debug.Log("[Quick Stop Training Episode Ended] MaxCollidedFrames Exceeded");
                 m_EndEpisode = true;
+                AddReward(RewardsConfig.LastAccumulatedReward * 100000, ref RuntimeRewards.TotalLastAccumulatedReward);
             }
             m_checkPosition = transform.position;
         }
@@ -629,7 +628,7 @@ namespace KartGame.AI
                 FindCheckpointIndex(other, out var index);
 
                 Debug.Log($"[Exit Checkpoint]CheckPointIndex:[{index}]");
-                var directionDot = Vector3.Dot((transform.forward * m_Kart.LocalSpeed()).normalized, other.transform.forward);
+                var directionDot = Vector3.Dot(m_Kart.Rigidbody.velocity.normalized, other.transform.forward);
                 AddReward(RewardsConfig.PassCheckpointReward * directionDot, ref RuntimeRewards.TotalPassCheckpointReward);
 
 
@@ -651,6 +650,7 @@ namespace KartGame.AI
         {
             if (!m_startCheck)
             {
+                m_startCheck = true;
                 return;
             }
             var maskedValue = 1 << other.gameObject.layer;
@@ -658,7 +658,7 @@ namespace KartGame.AI
             if (triggered > 0)
             {
                 FindCheckpointIndex(other, out var index);
-                Debug.Log($"[Enter Checkpoint] index:{index}, m_CheckpointIndex:{m_CheckpointIndex},m_targetingCheckpointIndex:{m_targetingCheckpointIndex}");
+
 
                 if (index == -1)
                 {
@@ -669,8 +669,8 @@ namespace KartGame.AI
 
                 int nextCheckpointIndex = (m_CheckpointIndex + 1) % Checkpoints.Length;
 
-                var directionDot = Vector3.Dot((transform.forward * m_Kart.LocalSpeed()).normalized, other.transform.forward);
-
+                var directionDot = Vector3.Dot(m_Kart.Rigidbody.velocity.normalized, other.transform.forward);
+                Debug.Log($"[Enter Checkpoint] index:{index}, m_CheckpointIndex:{m_CheckpointIndex},m_targetingCheckpointIndex:{m_targetingCheckpointIndex},directionDot:{directionDot}");
                 if (directionDot > 0)
                 {
                     if (index == nextCheckpointIndex)
@@ -717,7 +717,7 @@ namespace KartGame.AI
             //average of next to checkpoint direction rewards
             var nextCollider = Checkpoints[m_targetingCheckpointIndex];
             var direction1 = (nextCollider.transform.position - m_Kart.transform.position).normalized;
-            var reward = Vector3.Dot(m_Kart.transform.forward * m_Kart.LocalSpeed(), direction1);
+            var reward = Vector3.Dot(m_Kart.Rigidbody.velocity, direction1);
             if (!Stucked && !Collided)
             {
                 if (reward < 0)
@@ -751,6 +751,7 @@ namespace KartGame.AI
             {
                 Debug.Log("[Quick Stop Training Episode Ended] MaxWrongDirectionFrames Exceeded");
                 m_EndEpisode = true;
+                AddReward(RewardsConfig.LastAccumulatedReward * 100000, ref RuntimeRewards.TotalLastAccumulatedReward);
             }
             if (m_rightDirectionFrames > TrainingConfigInfo.MaxRightDirectionFrames && (TrainingConfigInfo.MaxRightDirectionFrames > 0))
             {
@@ -786,6 +787,7 @@ namespace KartGame.AI
                 {
                     Debug.Log("[Quick Stop Training Episode Ended] MaxStuckedFrames Exceeded");
                     m_EndEpisode = true;
+                    AddReward(RewardsConfig.LastAccumulatedReward * 100000, ref RuntimeRewards.TotalLastAccumulatedReward);
                 }
 
                 // escape from stuck status
@@ -815,10 +817,8 @@ namespace KartGame.AI
             {
                 var direction = (m_checkPosition - transform.position).normalized;
 
-                var factor = Vector3.Dot(direction, m_Kart.transform.forward * m_Kart.LocalSpeed() / m_Kart.GetMaxSpeed());
-                var forwardFactor = Vector3.Dot(direction, m_Kart.transform.forward);
+                var factor = Vector3.Dot(direction, m_Kart.Rigidbody.velocity / m_Kart.GetMaxSpeed());
                 AddReward(factor * RewardsConfig.StuckPenalty, ref RuntimeRewards.TotalStuckPenalty);
-                AddReward(forwardFactor * RewardsConfig.StuckPenalty, ref RuntimeRewards.TotalStuckPenalty);
             }
 
         }
@@ -861,6 +861,7 @@ namespace KartGame.AI
             var nextCollider = Checkpoints[m_targetingCheckpointIndex];
             var directionNext = (nextCollider.transform.position - m_Kart.transform.position).normalized;
             sensor.AddObservation(directionNext);
+            sensor.AddObservation(m_Kart.Rigidbody.velocity);
             foreach (var current in Sensors)
             {
                 var xform = current.Transform;
