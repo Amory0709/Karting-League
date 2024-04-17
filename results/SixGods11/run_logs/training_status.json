@@ -1,0 +1,65 @@
+{
+    "SixGods": {
+        "checkpoints": [
+            {
+                "steps": 999939,
+                "file_path": "results\\SixGods11\\SixGods\\SixGods-999939.onnx",
+                "reward": null,
+                "creation_time": 1713381624.8014617,
+                "auxillary_file_paths": [
+                    "results\\SixGods11\\SixGods\\SixGods-999939.pt"
+                ]
+            },
+            {
+                "steps": 1155268,
+                "file_path": "results\\SixGods11\\SixGods\\SixGods-1155268.onnx",
+                "reward": null,
+                "creation_time": 1713382092.3864796,
+                "auxillary_file_paths": [
+                    "results\\SixGods11\\SixGods\\SixGods-1155268.pt"
+                ]
+            },
+            {
+                "steps": 1499988,
+                "file_path": "results\\SixGods11\\SixGods\\SixGods-1499988.onnx",
+                "reward": null,
+                "creation_time": 1713383234.4349627,
+                "auxillary_file_paths": [
+                    "results\\SixGods11\\SixGods\\SixGods-1499988.pt"
+                ]
+            },
+            {
+                "steps": 1541132,
+                "file_path": "results\\SixGods11\\SixGods\\SixGods-1541132.onnx",
+                "reward": null,
+                "creation_time": 1713383358.4643571,
+                "auxillary_file_paths": [
+                    "results\\SixGods11\\SixGods\\SixGods-1541132.pt"
+                ]
+            },
+            {
+                "steps": 1665122,
+                "file_path": "results\\SixGods11\\SixGods\\SixGods-1665122.onnx",
+                "reward": 5.19234914619786,
+                "creation_time": 1713383808.3570473,
+                "auxillary_file_paths": [
+                    "results\\SixGods11\\SixGods\\SixGods-1665122.pt"
+                ]
+            }
+        ],
+        "final_checkpoint": {
+            "steps": 1665122,
+            "file_path": "results\\SixGods11\\SixGods.onnx",
+            "reward": 5.19234914619786,
+            "creation_time": 1713383808.3570473,
+            "auxillary_file_paths": [
+                "results\\SixGods11\\SixGods\\SixGods-1665122.pt"
+            ]
+        }
+    },
+    "metadata": {
+        "stats_format_version": "0.3.0",
+        "mlagents_version": "0.28.0",
+        "torch_version": "1.7.1+cpu"
+    }
+}
