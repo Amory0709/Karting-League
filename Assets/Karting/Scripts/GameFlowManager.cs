@@ -5,6 +5,8 @@ using UnityEngine;
 using UnityEngine.Playables;
 using UnityEngine.SceneManagement;
 using KartGame.KartSystems;
+using KartGame.UI.Leaderboard;
+
 
 public enum GameState{Play, Won, Lost}
 
@@ -130,7 +132,7 @@ public class GameFlowManager : MonoBehaviour
                 // See if it's time to load the end scene (after the delay)
                 if (Time.time >= m_TimeLoadEndGameScene)
                 {
-                    SceneManager.LoadScene(m_SceneToLoad);
+                    //SceneManager.LoadScene(m_SceneToLoad);
                     gameState = GameState.Play;
                 }
             }
@@ -156,6 +158,5 @@ public class GameFlowManager : MonoBehaviour
         // Remember that we need to load the appropriate end scene after a delay
         gameState = win ? GameState.Won : GameState.Lost;
         endGameFadeCanvasGroup.gameObject.SetActive(true);
-        Debug.Log("Game over");
-    }    
+    }
 }

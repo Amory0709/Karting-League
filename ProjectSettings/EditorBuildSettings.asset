@@ -6,9 +6,12 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Karting/Scenes/KartClassic_TrainingB.unity
-    guid: 39df58c71514913458ba086ac830335a
+    path: Assets/Karting/Scenes/TrackOne.unity
+    guid: 0e23192db09e2bb41b02bfa7b6e46e2c
   - enabled: 1
-    path: Assets/Karting/Scenes/KartClassic_TrainingA.unity
-    guid: 14671d5128e8dbd4bbbd202158d3062a
+    path: Assets/Karting/Scenes/TrackTwo.unity
+    guid: d0b4245800bfa514f891fad4902cc774
+  - enabled: 1
+    path: Assets/Karting/Scenes/TrackThree.unity
+    guid: 410f0eb0b253930428cfecc22e23841b
   m_configObjects: {}
